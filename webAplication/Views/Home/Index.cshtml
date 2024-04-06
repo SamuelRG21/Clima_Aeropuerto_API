@@ -1,0 +1,207 @@
+﻿@{
+    ViewData["Title"] = "CLIMA EN VUELOS";
+    @model webAplication.Models.AuxDtView;
+}
+<h2 class="uk-text-center" style="color: #152e6e;">CONDICIONES METEOROLÓGICAS EN VUELOS</h2>
+<div class="uk-grid" uk-grid>
+    <div class="uk-width-2-5">
+        <div class="uk-align-center uk-width-1-2 uk-card-default hidden-alert" id="alertResponse" uk-alert></div>
+        <div class=" uk-width-1 hidden-alert" id="progress">
+            <h5 class="uk-text-uppercase uk-text-bolder" id="progress-text" style="color: #152e6e;"></h5>
+            <progress class="uk-progress uk-card-default" value="0" max="100" id="js-progressbar"></progress>
+        </div>
+        <div class="input-group" id="form">
+            <form>
+                <div class="uk-grid" uk-grid>
+                    <div class="uk-width-3-4">
+                        <input type="file" class="form-control" id="input-file-tickets" placeholder="not file" required>
+                    </div>
+                    <div class="uk-width-1-4">
+                        <button class="btn btn-outline-primary" type="button" id="sendFile">Subir</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<h6 style="color: #152e6e; margin-top:10px;">
+    El proceso de inserción de datos podría durar unos minutos.
+</h6>
+
+<div class="table-responsive" id="clientsF">
+    <div class="has-search">
+        <span class="fa fa-search form-control-feedback"></span>
+        <input id="searchEm" style="text-transform:uppercase;" type="text" class="form-control" placeholder="Search" onkeyup="searchDt()">
+    </div>
+    <br>
+    <table id="tableEmp" class="table table-hover table-striped table-sm">
+        <thead>
+            <tr class="tableHead" id="tableHead">
+                <th>#FLIGH</th>
+                <th>AIRLINE</th>
+                <th>CITY_ORIGIN</th>
+                <th>AIRPORT_ORIGIN</th>
+                <th>WEATHER_ORIGIN_CITY</th>
+                <th>CITY_DES</th>
+                <th>AIRPORT_DES</th>
+                <th>WEATHER_DES_CITY</th>
+            </tr>
+        </thead>
+        <tbody id="flighsTable">
+            @if (Model.Flight.Count > 0)
+            {
+                @foreach (var item in Model.Flight)
+                {
+                    <tr>
+                        <td class="text-left"> @item.Flight_num</td>
+                        <td class="text-left"> @item.Airline</td>
+                        <td class="text-left"> @item.Airports.Find(q => q.Journey == 0).City</td>
+                        <td class="text-left"> @item.Airports.Find(q => q.Journey == 0).Name</td>
+                        <td class="text-left"> @item.Airports.Find(q => q.Journey == 0).Weather.Description</td>
+                        <td class="text-left"> @item.Airports.Find(q => q.Journey == 1).City</td>
+                        <td class="text-left"> @item.Airports.Find(q => q.Journey == 1).Name</td>
+                        <td class="text-left"> @item.Airports.Find(q => q.Journey == 1).Weather.Description</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>NO SE ENCONTRARON REGISTROS O NO HAY CONEXIÓN CON EL SERVIDOR</tr>
+            }
+            
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script type="text/javascript">
+        let alert = document.getElementById('alertResponse');
+        let form = document.getElementById('form');
+        //Progress bar
+        let progress = document.getElementById('progress');
+        let progress_text = document.getElementById('progress-text');
+        let bar = document.getElementById('js-progressbar');
+        document.getElementById('sendFile').addEventListener('click', function (event) {
+            // Don't follow the link
+            event.preventDefault();
+            let fields = document.getElementById('input-file-tickets').files;
+            if (fields.length > 0) {
+                form.style.display = 'none';
+                progress.classList.remove("hidden-alert");
+                bar.value += 10;
+                progress_text.innerHTML = 'Procesando datos: ' + bar.value + ' %';
+
+                setTimeout(function () {
+                    //create AJAX request
+                    let xhr = new XMLHttpRequest();
+                    //Add file to form data
+                    let data = new FormData();
+                    data.append("file", fields[0]);
+                    xhr.open('POST', '@Url.Action("Index", "Home")');
+                    xhr.send(data);
+                    xhr.onload = function (xhr) {
+                        bar.value += 40;
+                        progress_text.innerHTML = 'Procesando datos: ' + bar.value + ' %';
+                        setTimeout(function () {
+                            alert.classList.remove("hidden-alert");
+                            if (xhr.target.response != "") {
+                                let response = JSON.parse(xhr.target.response);
+
+                                if (response.data.code == 200) {
+                                    bar.value += 50;
+                                    progress_text.innerHTML = 'Archivo procesado con éxito';
+                                    setTimeout(function () { progress.classList.add("hidden-alert"); }, 300);
+                                } else {
+                                    bar.value = 0;
+                                    progress.classList.add("hidden-alert");
+                                }
+                                TypeResponse(response, alert);
+                            } else {
+                                bar.value = 0;
+                                progress.classList.add("hidden-alert");
+                                alert.classList.add("uk-alert-danger");
+                                alert.innerHTML = '<p><b id="MessageValidate">Server not connected</b></p>';
+                            }
+                            clear();
+                        }, 200);
+                    };
+                    xhr.onerror = function () {
+                        bar.value = 0;
+                        alert.classList.add("uk-alert-danger");
+                        alert.innerHTML = '<p><b id="MessageValidate">Server not connected</b></p>';
+                    }
+                }, 2000);
+            } else {
+                alert.classList.remove("hidden-alert");
+                alert.classList.add("uk-alert-warning");
+                alert.innerHTML = '<p><b id="MessageValidate">No hay archivo seleccionado</b></p>';
+                clear();
+            }
+        }, false);
+
+        function clear() {
+            setTimeout(function () {
+                alert.className = "";
+                alert.classList.add("uk-align-center");
+                alert.classList.add("uk-width-1-2");
+                alert.classList.add("uk-card-default");
+                alert.classList.add("hidden-alert");
+                alert.innerHTML = "";
+                input = document.getElementById("input-file-tickets");
+                input.value = ''
+                progress.classList.add("hidden-alert");
+                progress_text.innerHTML = '';
+                bar.value = 0;
+                form.style.display = 'block';
+            }, 3000);
+        }
+        function TypeResponse(response, alert) {
+            switch (response.data.code) {
+                case 200: { alert.classList.add("uk-alert-success"); break; }
+                case 400:
+                case 404: { alert.classList.add("uk-alert-warning"); break; }
+                default: { alert.classList.add("uk-alert-danger"); break; }
+            }
+            alert.innerHTML = '<p><b id="MessageValidate">' + response.data.description + '</b></p>';
+        }
+
+        function searchDt() {
+            var input, filter, table, tr, td, i, txtValue;
+            input = document.getElementById('searchEm');
+            filter = input.value.toUpperCase();
+            table = document.getElementById("tableEmp");
+            tr = table.getElementsByTagName('tr');
+            console.log(tr);
+            //tr = table.getElementsByClassName(activeCl.slice(1));
+            for (i = 1; i < tr.length; i++) {
+                if ((filter.length === 0)) {
+                    /*if ((i + 1 > (currentPage * numberPerPage) - numberPerPage && i + 1 <= (currentPage * numberPerPage))) {
+                        tr[i].classList.remove('hidden');
+                        tr[i].style.display = "";
+
+                    } else {
+                        tr[i].classList.add('hidden');
+                        tr[i].style.display = "";
+                    }*/
+                } else {
+                    txtValue = '';
+                    for (m = 0; m < tr[i].getElementsByTagName("td").length; m++) {
+                        if (!tr[i].getElementsByTagName("td")[m].classList.contains('hidden')) {
+                            td = tr[i].getElementsByTagName("td")[m];
+                            txtValue += td.textContent || td.innerText;
+
+                        }
+
+
+                    }
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                        tr[i].classList.remove('hidden');
+                    } else {
+                        tr[i].style.display = "none";
+                    }
+                }
+            }
+        }
+    </script>
+}
