@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "OCEPgaJYCRfFlrF4HEKi1p/Qd9jx44vtAnWCGDPYB4B7E71g5t8UNhF3Vy0m/rNm4KdgzXVyR0FZC+pEt7UWaA==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Sam\\Desktop\\ApiWeather\\api-weather\\webAplication\\webAplication.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Sam\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512"
+  ],
+  "logs": []
+}
