@@ -2,10 +2,14 @@
 using api_weather.Dao;
 using api_weather.Models;
 using api_weather.Tools;
+using CsvHelper.Configuration;
+using CsvHelper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 namespace api_weather.Controllers
@@ -25,12 +29,23 @@ namespace api_weather.Controllers
 
         [HttpPost]
         public async Task<ObjectResult> Post([FromForm(Name = "file")] IFormFile file) //obtener archivo CSV en el servicio
-        {
+        {        
             AuxDtView auxDtView = new();
             if (file != null && file.Length > 0)//Verificar el archivo
             {
-                _flightContext.Database.ExecuteSqlRaw("dbo.resetDataSet");//ejecutar store procedure para descartar datos del archivo anterior
-                auxDtView = await _daoAux.ReadFile(file, _flightContext);//enviar archivo y contexto para realizar guardado en base de datos
+                using (var transac = await _flightContext.Database.BeginTransactionAsync())
+                {
+                    try
+                    {
+                        auxDtView = await _daoAux.ReadFile(file, _flightContext, auxDtView);//enviar archivo y contexto para realizar guardado en base de datos
+                        await transac.CommitAsync(); // Confirmar la transacción
+                    }
+                    catch (Exception)
+                    {
+                        await transac.RollbackAsync(); //revertir transacción
+                        auxDtView.message = _daoAux.SetMessage(500, "INTERNAL SERVER", "ERROR AL GUARDAR DATOS");
+                    }
+                }                               
             }
             else {
                 auxDtView.message = _daoAux.SetMessage(404, "NOT FOUND","FILE EMPTY");

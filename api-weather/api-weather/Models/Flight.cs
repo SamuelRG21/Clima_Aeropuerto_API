@@ -14,17 +14,17 @@ public partial class Flight
     public int Id { get; set; }
 
     [Column("flight_num")]
-    public int? FlightNum { get; set; }
+    public int FlightNum { get; set; }
 
     [Column("airline")]
     [StringLength(15)]
     [Unicode(false)]
-    public string? Airline { get; set; }
+    public string Airline { get; set; }
 
     [Column("folio")]
     [StringLength(50)]
     [Unicode(false)]
-    public string? Folio { get; set; }
+    public string Folio { get; set; }
 
     [InverseProperty("Flight")]
     public virtual ICollection<Itinerary> Itineraries { get; set; } = new List<Itinerary>();
