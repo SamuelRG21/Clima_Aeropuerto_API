@@ -105,12 +105,15 @@
                         setTimeout(function () {
                             alert.classList.remove("hidden-alert");
                             if (xhr.target.response != "") {
-                                let response = JSON.parse(xhr.target.response);
-
+                                let response = JSON.parse(xhr.target.response);;
                                 if (response.data.code == 200) {
                                     bar.value += 50;
                                     progress_text.innerHTML = 'Archivo procesado con éxito';
-                                    setTimeout(function () { progress.classList.add("hidden-alert"); }, 300);
+                                    setTimeout(function () { 
+                                        progress.classList.add("hidden-alert");
+                                        window.location.href = response.url;
+                                    }, 2000);
+                                    
                                 } else {
                                     bar.value = 0;
                                     progress.classList.add("hidden-alert");
@@ -171,18 +174,8 @@
             filter = input.value.toUpperCase();
             table = document.getElementById("tableEmp");
             tr = table.getElementsByTagName('tr');
-            console.log(tr);
-            //tr = table.getElementsByClassName(activeCl.slice(1));
             for (i = 1; i < tr.length; i++) {
                 if ((filter.length === 0)) {
-                    /*if ((i + 1 > (currentPage * numberPerPage) - numberPerPage && i + 1 <= (currentPage * numberPerPage))) {
-                        tr[i].classList.remove('hidden');
-                        tr[i].style.display = "";
-
-                    } else {
-                        tr[i].classList.add('hidden');
-                        tr[i].style.display = "";
-                    }*/
                 } else {
                     txtValue = '';
                     for (m = 0; m < tr[i].getElementsByTagName("td").length; m++) {

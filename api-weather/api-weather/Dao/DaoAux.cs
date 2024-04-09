@@ -28,17 +28,19 @@ namespace api_weather.Dao
             {
                 using var streamReader = new StreamReader(file.OpenReadStream()); //leer los registros del archivo csv.00000
                 using var csv = new CsvReader(streamReader, new CsvConfiguration(CultureInfo.InvariantCulture));
-                ticketsFL = await csv.GetRecordsAsync<TicketsAux>().ToListAsync();//leer los registros y convertirlos en una lista
-                await _flightContext.Database.ExecuteSqlRawAsync("dbo.resetDataSet");//ejecutar store procedure para descartar datos anteriores           
+                var readCSV = new List<Task>() { 
+                };
 
-                //depende de 
+                ticketsFL =  await csv.GetRecordsAsync<TicketsAux>().ToListAsync();//leer los registros y convertirlos en una lista
+                await  _flightContext.Database.ExecuteSqlRawAsync("dbo.resetDataSet");//ejecutar store procedure para descartar datos anteriores           
+ 
                 var listAuxF = ticketsFL.GroupBy(q => new
                 { //Lista auxiliar para obtener los tickets únicos (vuelos)
                     q.Flight_num,
                     q.Airline,
                     q.Origin_iata_code,
                     q.Destination_iata_code
-                }).Select(group => new { Ticket = group.First(), Count = group.Count() }).ToList();
+                }).Select(group => new { Ticket = group.First(), Count = group.Count()}).ToList();
 
                 List<Flight> listFlight = [];//crear lista para los vuelos
                 listFlight = listAuxF.Select(q => q.Ticket).Select(q => new Flight() //tomar de la lista auxiliar de tickets únicos, los datos necesarios para crear la lista de vuelos
@@ -47,7 +49,7 @@ namespace api_weather.Dao
                     Airline = q.Airline,
                     Folio = q.Airline + q.Flight_num + q.Origin_iata_code + q.Destination_iata_code,
                 }).ToList();
-                await _flightContext.Flights.AddRangeAsync(listFlight);  //Agregar lista de vuelos únicos al contexto de la base de datos
+                var addFlightsTask = _flightContext.Flights.AddRangeAsync(listFlight);  //Agregar lista de vuelos únicos al contexto de la base de datos
 
                 List<Airport> airportListAux = [];//crear lista de tipo Aeropuerto
                 airportListAux = listAuxF.Select(q => q.Ticket).SelectMany(aero => new Airport[]{ //de la lista filtrada de ticket por vuelo, obtener la lista de aeropuertos únicos
@@ -62,8 +64,9 @@ namespace api_weather.Dao
                     Lat = aero.Destination_latitude,
                     Lon = aero.Destination_longitude},
             }).DistinctBy(q => q.City).ToList();
-                await _flightContext.Airports.AddRangeAsync(airportListAux);  //Agregar lista de aeropuertos unicos al contexto de la base de datos
-                await _flightContext.SaveChangesAsync();
+                var addAirportsTask = _flightContext.Airports.AddRangeAsync(airportListAux);  //Agregar lista de aeropuertos unicos al contexto de la base de datos
+                _ = Task.WhenAll(addAirportsTask, addFlightsTask);
+                await _flightContext.SaveChangesAsync(); //guardar en base de datos información de los vuelos y aeropuertos
 
                 //obtener los tickets por cada vuelo
                 List<Ticket> listTickets = [];
@@ -80,8 +83,7 @@ namespace api_weather.Dao
                     }
                     return ticketsForFlight;
                 }).ToList();
-                await _flightContext.Tickets.AddRangeAsync(listTickets); //agregar lsita de tickets a base de datos
-
+                var addTicketsTask = _flightContext.Tickets.AddRangeAsync(listTickets); //agregar lista de tickets a base de datos
 
                 //Obtener datos de clima para cada una de las ciudades
                 List<WeatherDay> listW = new();//lista auxiliar de datos de clima
@@ -109,7 +111,7 @@ namespace api_weather.Dao
                         listW.Add(wDay);//agregar lista auxiliar de datos de clima al contexto
                     }
                 }
-                await _flightContext.WeatherDays.AddRangeAsync(listW);
+                var addWeatherTask = _flightContext.WeatherDays.AddRangeAsync(listW);
 
 
                 List<Itinerary> listItinerary = []; //lista de itinerarios 2 por cada vuelo (origen-destino)
@@ -135,7 +137,8 @@ namespace api_weather.Dao
                     }
                     };
                 }).ToList();//crear lista para obtener los itinerarios de cada vuelo que se ha guardado en la base de datos
-                await _flightContext.Itineraries.AddRangeAsync(listItinerary); //agregar los itinerarios al contexto de la base de datos
+                var addItinerariesTask = _flightContext.Itineraries.AddRangeAsync(listItinerary); //agregar los itinerarios al contexto de la base de datos
+                _ = Task.WhenAll(addItinerariesTask, addWeatherTask, addTicketsTask); //esperar a que se completen las tareas para guardar en BD
                 await _flightContext.SaveChangesAsync();//guardar en base de datos
 
                 foreach (var item in listFlight)

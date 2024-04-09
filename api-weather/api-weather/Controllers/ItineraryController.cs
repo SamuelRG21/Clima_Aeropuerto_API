@@ -56,8 +56,7 @@ namespace api_weather.Controllers
         [HttpGet]
         public async Task<ObjectResult> Get()
         {
-            AuxDtView auxDtView = new();
-            auxDtView = await _daoAux.GetData(_flightContext);//obtener los climas de los vuelos guardados en la base de datos
+            AuxDtView auxDtView = await _daoAux.GetData(_flightContext);
             return StatusCode(auxDtView.message.Code, auxDtView);
         }
     }

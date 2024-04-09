@@ -64,14 +64,16 @@ namespace webAplication.Controllers
             if (response.StatusCode != HttpStatusCode.InternalServerError)
             {
                 dt = JsonConvert.DeserializeObject<AuxDtView>(response.Content.ReadAsStringAsync().Result);
+                //return await Index(dt);
             }
             else
             {
                 dt.message.Code = 500;
                 dt.message.Description = "Several internal error";
                 dt.message.Status = "Error";
+                //return Json(new { status = "success", data = dt.message, flights = dt.Flight });
             }
-            return Json(new { status = "success", data = dt.message, flights = dt.Flight });
+            return Json(new { status = "success", data = dt.message, flights = dt.Flight, url = Url.Action("Index", "Home") });
         }
 
         public IActionResult Privacy()
